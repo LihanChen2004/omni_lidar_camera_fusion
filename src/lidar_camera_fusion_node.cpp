@@ -17,7 +17,7 @@ OmniLidarCameraFusion::OmniLidarCameraFusion(ros::NodeHandle & nh)
   tf::TransformListener listener;
   tf::StampedTransform transform;
   try {
-    listener.waitForTransform(camera_frame_id_, lidar_frame_id_, ros::Time(0), ros::Duration(5.0));
+    listener.waitForTransform(camera_frame_id_, lidar_frame_id_, ros::Time(0), ros::Duration(20.0));
     listener.lookupTransform(camera_frame_id_, lidar_frame_id_, ros::Time(0), transform);
   } catch (tf::TransformException & ex) {
     ROS_ERROR("%s", ex.what());
