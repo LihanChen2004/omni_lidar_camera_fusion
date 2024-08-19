@@ -7,11 +7,13 @@ OmniLidarCameraFusion::OmniLidarCameraFusion(ros::NodeHandle & nh)
 {
   nh.getParam("camera_frame_id", camera_frame_id_);
   nh.getParam("lidar_frame_id", lidar_frame_id_);
-  nh.getParam("/pcd_topic", pcTopic_);
-  nh.getParam("/img_topic", imgTopic_);
+  nh.getParam("pcd_topic", pcTopic_);
+  nh.getParam("img_topic", imgTopic_);
 
-  nh.getParam("/cam_hfov", cam_hfov_);
-  nh.getParam("/cam_vfov", cam_vfov_);
+  nh.getParam("cam_hfov", cam_hfov_);
+  nh.getParam("cam_vfov", cam_vfov_);
+  nh.getParam("lidar_min_range", lidar_min_range_);
+  nh.getParam("lidar_max_range", lidar_max_range_);
 
   // Get the transform from lidar frame to camera frame
   tf::TransformListener listener;
@@ -45,17 +47,13 @@ OmniLidarCameraFusion::OmniLidarCameraFusion(ros::NodeHandle & nh)
 void OmniLidarCameraFusion::filterPointCloud(
   PointCloud::Ptr & cloud, float min_dist, float max_dist)
 {
-  std::vector<int> indices;
-  pcl::removeNaNFromPointCloud(*cloud, *cloud, indices);
-
-  PointCloud::Ptr filtered_cloud(new PointCloud);
-  for (const auto & point : cloud->points) {
-    double distance = std::hypot(point.x, point.y);
-    if (distance >= min_dist && distance <= max_dist) {
-      filtered_cloud->points.push_back(point);
+  for (auto it = cloud->begin(); it != cloud->end(); ++it) {
+    float distance = std::sqrt(it->x * it->x + it->y * it->y + it->z * it->z);
+    if (distance < min_dist || distance > max_dist) {
+      it = cloud->erase(it);
+      --it;
     }
   }
-  cloud.swap(filtered_cloud);
 }
 
 void OmniLidarCameraFusion::callback(
@@ -69,6 +67,8 @@ void OmniLidarCameraFusion::callback(
   // Convert point cloud data
   PointCloud::Ptr original_cloud(new PointCloud);
   pcl::fromROSMsg(*input_cloud_msg, *original_cloud);
+
+  filterPointCloud(original_cloud, lidar_min_range_, lidar_max_range_);
 
   // Transform point cloud to camera frame
   pcl::transformPointCloud(*original_cloud, *original_cloud, lidar2camera_);
@@ -89,9 +89,9 @@ void OmniLidarCameraFusion::callback(
     if (v >= 0 && v < (input_image_msg->height) && u >= 0 && u < (input_image_msg->width)) {
       color = cv_image_ptr->image.at<cv::Vec3b>(v, u);
     } else {
-      ROS_WARN("Invalid pixel coordinates (%d, %d)", u, v);
-      ROS_DEBUG("point_x: %f, point_y: %f, point_z: %f", point.x, point.y, point.z);
-      ROS_DEBUG("r: %f, phi: %f, theta: %f", r, phi, theta);
+      ROS_WARN(
+        "Invalid pixel coordinates (%d, %d) \n point: (%f, %f, %f) \n r: %f, phi: %f, theta: %f", u,
+        v, point.x, point.y, point.z, r, phi, theta);
       continue;
     }
 

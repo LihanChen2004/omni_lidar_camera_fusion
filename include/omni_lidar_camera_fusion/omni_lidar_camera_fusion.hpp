@@ -48,6 +48,8 @@ private:
   std::string pcTopic_;
   float cam_hfov_;
   float cam_vfov_;
+  float lidar_min_range_;
+  float lidar_max_range_;
   Eigen::Matrix4f lidar2camera_;
   boost::shared_ptr<pcl::RangeImageSpherical> range_image_;
 };
