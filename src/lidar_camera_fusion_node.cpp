@@ -3,13 +3,13 @@
 
 #include "omni_lidar_camera_fusion/omni_lidar_camera_fusion.hpp"
 
-OmniLidarCameraFusion::OmniLidarCameraFusion(ros::NodeHandle & nh)
+OmniLidarCameraFusion::OmniLidarCameraFusion()
 {
+  ros::NodeHandle nh("~");
   nh.getParam("camera_frame_id", camera_frame_id_);
   nh.getParam("lidar_frame_id", lidar_frame_id_);
   nh.getParam("pcd_topic", pcTopic_);
   nh.getParam("img_topic", imgTopic_);
-
   nh.getParam("cam_hfov", cam_hfov_);
   nh.getParam("cam_vfov", cam_vfov_);
   nh.getParam("lidar_min_range", lidar_min_range_);
@@ -36,11 +36,11 @@ OmniLidarCameraFusion::OmniLidarCameraFusion(ros::NodeHandle & nh)
   img_pub_ = nh.advertise<sensor_msgs::Image>("/sensor_scan_image", 1);
 
   // Initialize message filters and synchronizer
-  pcd_sub.subscribe(nh, pcTopic_, 1);
-  img_sub.subscribe(nh, imgTopic_, 1);
+  pcd_sub_.subscribe(nh, pcTopic_, 1);
+  img_sub_.subscribe(nh, imgTopic_, 1);
 
   sync_ = std::make_shared<message_filters::Synchronizer<MySyncPolicy>>(10);
-  sync_->connectInput(pcd_sub, img_sub);
+  sync_->connectInput(pcd_sub_, img_sub_);
   sync_->registerCallback(boost::bind(&OmniLidarCameraFusion::callback, this, _1, _2));
 }
 
@@ -126,11 +126,8 @@ int main(int argc, char ** argv)
 {
   pcl::console::setVerbosityLevel(pcl::console::L_ERROR);
 
-  ros::init(argc, argv, "point_cloud_on_image");
-  ros::NodeHandle nh;
-
-  OmniLidarCameraFusion pc_on_img(nh);
-
+  ros::init(argc, argv, "omni_lidar_camera_fusion");
+  OmniLidarCameraFusion omnilidarcamerafusion;
   ros::spin();
   return 0;
 }

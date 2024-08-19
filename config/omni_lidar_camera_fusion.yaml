@@ -1,0 +1,8 @@
+pcd_topic: "/sensor_scan"
+img_topic: "/camera/image"
+camera_frame_id: "camera"
+lidar_frame_id: "sensor_at_scan"
+cam_hfov: 360.0
+cam_vfov: 120.0
+lidar_min_range: 0.5
+lidar_max_range: 30.0

@@ -24,7 +24,7 @@ using PointCloud = pcl::PointCloud<pcl::PointXYZI>;
 class OmniLidarCameraFusion
 {
 public:
-  OmniLidarCameraFusion(ros::NodeHandle & nh);
+  OmniLidarCameraFusion();
 
 private:
   void callback(
@@ -38,8 +38,8 @@ private:
 
   ros::Publisher img_pub_;
   ros::Publisher pcd_pub_;
-  message_filters::Subscriber<sensor_msgs::PointCloud2> pcd_sub;
-  message_filters::Subscriber<sensor_msgs::Image> img_sub;
+  message_filters::Subscriber<sensor_msgs::PointCloud2> pcd_sub_;
+  message_filters::Subscriber<sensor_msgs::Image> img_sub_;
   std::shared_ptr<message_filters::Synchronizer<MySyncPolicy>> sync_;
 
   std::string camera_frame_id_;

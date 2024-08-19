@@ -1,16 +1,9 @@
 <?xml version="1.0"?>
 <launch>
 
-  <param name="pcd_topic" type="str" value="/sensor_scan" />
-  <param name="img_topic" type="str" value="/camera/image" />
-  <param name="camera_frame_id" type="str" value="camera" />
-  <param name="lidar_frame_id" type="str" value="sensor_at_scan" />
-  <param name="cam_hfov" type="double" value="360" />
-  <param name="cam_vfov" type="double" value="120" />
-  <param name="lidar_min_range" type="double" value="0.5" />
-  <param name="lidar_max_range" type="double" value="30.0" />
-
-  <node pkg="omni_lidar_camera_fusion" type="lidar_camera_fusion_node" name="lidar_camera_fusion_node" output="screen"/>
+  <node pkg="omni_lidar_camera_fusion" type="lidar_camera_fusion_node" name="lidar_camera_fusion_node" output="screen">
+    <rosparam file="$(find omni_lidar_camera_fusion)/config/omni_lidar_camera_fusion.yaml"/>
+  </node>
 
   <node type="rviz" name="rviz" pkg="rviz" args="-d $(find omni_lidar_camera_fusion)/rviz/lidar_camera.rviz" />
 
