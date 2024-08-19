@@ -29,7 +29,7 @@ catkin_make
 
 ## Usage
 
-Params are as shown in [lidar_camera_fusion.launch](./launch/lidar_camera_fusion.launch)
+Params are as shown in [omni_lidar_camera_fusion.yaml](./config/omni_lidar_camera_fusion.yaml)
 
 ```sh
 source devel/setup.bash
