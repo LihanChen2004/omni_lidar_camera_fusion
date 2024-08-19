@@ -82,11 +82,20 @@ void OmniLidarCameraFusion::callback(
     float phi = std::asin(point.y / r);
     float theta = std::atan2(point.x, point.z);
 
-    int u = static_cast<int>((theta / cam_hfov_ + 0.5) * input_image_msg->width);
-    int v = static_cast<int>((phi / cam_vfov_ + 0.5) * input_image_msg->height);
+    unsigned int u = ((theta / (cam_hfov_ * M_PI / 180) + 0.5) * input_image_msg->width);
+    unsigned int v = ((phi / (cam_vfov_ * M_PI / 180) + 0.5) * input_image_msg->height);
+
+    cv::Vec3b color;
+    if (v >= 0 && v < (input_image_msg->height) && u >= 0 && u < (input_image_msg->width)) {
+      color = cv_image_ptr->image.at<cv::Vec3b>(v, u);
+    } else {
+      ROS_WARN("Invalid pixel coordinates (%d, %d)", u, v);
+      ROS_DEBUG("point_x: %f, point_y: %f, point_z: %f", point.x, point.y, point.z);
+      ROS_DEBUG("r: %f, phi: %f, theta: %f", r, phi, theta);
+      continue;
+    }
 
     // Point cloud coloring
-    cv::Vec3b color = cv_image_ptr->image.at<cv::Vec3b>(v, u);
     pcl::PointXYZRGB colored_point;
     colored_point.x = point.x;
     colored_point.y = point.y;

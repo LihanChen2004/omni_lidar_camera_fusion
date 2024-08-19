@@ -5,8 +5,8 @@
   <param name="img_topic" type="str" value="/camera/image" />
   <param name="camera_frame_id" type="str" value="camera" />
   <param name="lidar_frame_id" type="str" value="sensor_at_scan" />
-  <param name="cam_hfov" type="double" value="6.28" />
-  <param name="cam_vfov" type="double" value="2.094396" />
+  <param name="cam_hfov" type="double" value="360" />
+  <param name="cam_vfov" type="double" value="120" />
 
   <node pkg="omni_lidar_camera_fusion" type="lidar_camera_fusion_node" name="lidar_camera_fusion_node" output="screen"/>
 
