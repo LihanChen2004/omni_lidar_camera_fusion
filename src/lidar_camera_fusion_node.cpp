@@ -18,12 +18,13 @@ OmniLidarCameraFusion::OmniLidarCameraFusion()
   // Get the transform from lidar frame to camera frame
   tf::TransformListener listener;
   tf::StampedTransform transform;
-  try {
-    listener.waitForTransform(camera_frame_id_, lidar_frame_id_, ros::Time(0), ros::Duration(20.0));
-    listener.lookupTransform(camera_frame_id_, lidar_frame_id_, ros::Time(0), transform);
-  } catch (tf::TransformException & ex) {
-    ROS_ERROR("%s", ex.what());
-    return;
+  while (true) {
+    try {
+      listener.lookupTransform(camera_frame_id_, lidar_frame_id_, ros::Time(0), transform);
+      break;
+    } catch (tf::TransformException & ex) {
+      ros::Duration(1.0).sleep();
+    }
   }
   Eigen::Affine3d lidar2camera_eigen;
   tf::transformTFToEigen(transform, lidar2camera_eigen);
