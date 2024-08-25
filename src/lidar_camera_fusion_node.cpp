@@ -23,6 +23,7 @@ OmniLidarCameraFusion::OmniLidarCameraFusion()
       listener.lookupTransform(camera_frame_id_, lidar_frame_id_, ros::Time(0), transform);
       break;
     } catch (tf::TransformException & ex) {
+      ROS_WARN("%s\n", ex.what());
       ros::Duration(1.0).sleep();
     }
   }
