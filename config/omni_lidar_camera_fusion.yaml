@@ -1,5 +1,7 @@
 pcd_topic: "/sensor_scan"
+semantic_pcd_topic: "/sensor_semantic_scan"
 img_topic: "/camera/image"
+semantic_topic: "/camera/semantic_image"
 camera_frame_id: "camera"
 lidar_frame_id: "sensor_at_scan"
 cam_hfov: 360.0

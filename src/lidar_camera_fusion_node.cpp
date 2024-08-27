@@ -9,6 +9,8 @@ OmniLidarCameraFusion::OmniLidarCameraFusion()
   nh.getParam("lidar_frame_id", lidar_frame_id_);
   nh.getParam("pcd_topic", pcTopic_);
   nh.getParam("img_topic", imgTopic_);
+  nh.getParam("semantic_pcd_topic", semantic_pcTopic_);
+  nh.getParam("semantic_topic", semanticTopic_);
   nh.getParam("cam_hfov", cam_hfov_);
   nh.getParam("cam_vfov", cam_vfov_);
   nh.getParam("lidar_min_range", lidar_min_range_);
@@ -33,16 +35,20 @@ OmniLidarCameraFusion::OmniLidarCameraFusion()
 
   // Initialize publishers
   pcd_pub_ = nh.advertise<PointCloud>("/sensor_scan_rgb", 1);
+  semantic_pcd_pub_ = nh.advertise<PointCloud>("/sensor_scan_semantic_pcd", 1);
   img_pub_ = nh.advertise<sensor_msgs::Image>("/sensor_scan_image", 1);
   pcd_on_global_o3d_pub_ = nh.advertise<PointCloud>("/sensor_scan_rgb_global_o3d", 1);
+  semantic_pub_ = nh.advertise<sensor_msgs::Image>("/sensor_scan_semantic_img", 1);
 
   // Initialize message filters and synchronizer
   pcd_sub_.subscribe(nh, pcTopic_, 1);
+  semantic_pcd_sub_.subscribe(nh, semantic_pcTopic_, 1);
   img_sub_.subscribe(nh, imgTopic_, 1);
+  semantic_sub_.subscribe(nh, semanticTopic_, 1);
 
   sync_ = std::make_shared<message_filters::Synchronizer<MySyncPolicy>>(10);
-  sync_->connectInput(pcd_sub_, img_sub_);
-  sync_->registerCallback(boost::bind(&OmniLidarCameraFusion::callback, this, _1, _2));
+  sync_->connectInput(pcd_sub_, img_sub_, semantic_sub_);
+  sync_->registerCallback(boost::bind(&OmniLidarCameraFusion::callback, this, _1, _2, _3));
 }
 
 void OmniLidarCameraFusion::filterPointCloud(
@@ -59,11 +65,13 @@ void OmniLidarCameraFusion::filterPointCloud(
 
 void OmniLidarCameraFusion::callback(
   const sensor_msgs::PointCloud2ConstPtr & input_cloud_msg,
-  const sensor_msgs::ImageConstPtr & input_image_msg)
+  const sensor_msgs::ImageConstPtr & input_image_msg,
+  const sensor_msgs::ImageConstPtr & input_semantic_image_msg)
 {
   // Convert image data
   auto cv_image_ptr = cv_bridge::toCvShare(input_image_msg, sensor_msgs::image_encodings::BGR8);
   auto cv_color_ptr = cv_bridge::toCvCopy(input_image_msg, sensor_msgs::image_encodings::BGR8);
+  auto cv_semantic_ptr = cv_bridge::toCvShare(input_semantic_image_msg, sensor_msgs::image_encodings::BGR8);
 
   // Convert point cloud data
   PointCloud::Ptr original_cloud(new PointCloud);
@@ -78,6 +86,10 @@ void OmniLidarCameraFusion::callback(
   colored_point_cloud->header.frame_id = input_image_msg->header.frame_id;
   colored_point_cloud->header.stamp = original_cloud->header.stamp;
 
+  pcl::PointCloud<pcl::PointXYZRGB>::Ptr semantic_point_cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
+  semantic_point_cloud->header.frame_id = input_image_msg->header.frame_id;
+  semantic_point_cloud->header.stamp = original_cloud->header.stamp;
+
   for (const auto & point : original_cloud->points) {
     float r = std::sqrt(point.x * point.x + point.y * point.y + point.z * point.z);
     float phi = std::asin(point.y / r);
@@ -87,8 +99,10 @@ void OmniLidarCameraFusion::callback(
     unsigned int v = ((phi / (cam_vfov_ * M_PI / 180) + 0.5) * input_image_msg->height);
 
     cv::Vec3b color;
+    cv::Vec3b semantic_color;
     if (v >= 0 && v < (input_image_msg->height) && u >= 0 && u < (input_image_msg->width)) {
       color = cv_image_ptr->image.at<cv::Vec3b>(v, u);
+      semantic_color = cv_semantic_ptr->image.at<cv::Vec3b>(v, u);
     } else {
       ROS_WARN(
         "Invalid pixel coordinates (%d, %d) \n point: (%f, %f, %f) \n r: %f, phi: %f, theta: %f", u,
@@ -106,16 +120,37 @@ void OmniLidarCameraFusion::callback(
     colored_point.b = color[0];
     colored_point_cloud->points.push_back(colored_point);
 
+    //Point cloud semanticing
+    pcl::PointXYZRGB semantic_point;
+    semantic_point.x = point.x;
+    semantic_point.y = point.y;
+    semantic_point.z = point.z;
+    semantic_point.r = semantic_color[2];
+    semantic_point.g = semantic_color[1];
+    semantic_point.b = semantic_color[0];
+    semantic_point_cloud->points.push_back(semantic_point);
+
     // Draw point on image
     cv::circle(
       cv_color_ptr->image, cv::Point(u, v), 1, CV_RGB(color[2] + 40, color[1] + 40, color[0] + 40),
+      -1);
+
+    // Draw point on semantic image
+    cv::circle(
+      cv_semantic_ptr->image, cv::Point(u, v), 1, CV_RGB(semantic_color[2] + 40, semantic_color[1] + 40, semantic_color[0] + 40),
       -1);
   }
 
   // Transform point cloud back to lidar frame
   pcl::transformPointCloud(*colored_point_cloud, *colored_point_cloud, lidar2camera_.inverse());
+  pcl::transformPointCloud(*semantic_point_cloud, *semantic_point_cloud, lidar2camera_.inverse());
   colored_point_cloud->header.frame_id = input_cloud_msg->header.frame_id;
+  semantic_point_cloud->header.frame_id = input_cloud_msg->header.frame_id;
   pcd_pub_.publish(colored_point_cloud);
+
+  std::cout << "colored_point_cloud->points.size()" << colored_point_cloud->points.size() << std::endl;
+  std::cout << "semantic_point_cloud->points.size()" << semantic_point_cloud->points.size() << std::endl;
+  semantic_pcd_pub_.publish(semantic_point_cloud);
 
   OmniLidarCameraFusion::transformPointCloud(colored_point_cloud); // Transform point cloud to map frame
   pcd_on_global_o3d_pub_.publish(colored_point_cloud);
@@ -124,6 +159,10 @@ void OmniLidarCameraFusion::callback(
   sensor_msgs::ImagePtr output_image_msg =
     cv_bridge::CvImage(input_image_msg->header, "bgr8", cv_color_ptr->image).toImageMsg();
   img_pub_.publish(output_image_msg);
+
+  sensor_msgs::ImagePtr output_semantic_msg =
+    cv_bridge::CvImage(input_image_msg->header, "bgr8", cv_semantic_ptr->image).toImageMsg();
+  semantic_pub_.publish(output_semantic_msg);
 }
 
 void OmniLidarCameraFusion::transformPointCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr & cloud)
