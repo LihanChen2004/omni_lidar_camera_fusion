@@ -7,4 +7,9 @@
 
   <node type="rviz" name="rviz" pkg="rviz" args="-d $(find omni_lidar_camera_fusion)/rviz/lidar_camera.rviz" />
 
+  <node type="rviz" name="rviz_semantic" pkg="rviz" args="-d $(find omni_lidar_camera_fusion)/rviz/lidar_camera_semantic.rviz" />
+
+
+  <node pkg="omni_lidar_camera_fusion" name="mapper_node_lidar" type="mapper_node.py" output="screen" args="$(find omni_lidar_camera_fusion)/scripts/nodes/mapper_node.py"/>
+
 </launch>
