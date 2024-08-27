@@ -16,6 +16,7 @@
 #include <ros/ros.h>
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/PointCloud2.h>
+#include <tf/transform_listener.h>
 
 #include <opencv2/core/core.hpp>
 
@@ -33,14 +34,18 @@ private:
 
   void filterPointCloud(PointCloud::Ptr & cloud, float min_dist, float max_dist);
 
+  void transformPointCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr & cloud);
+
   using MySyncPolicy =
     message_filters::sync_policies::ApproximateTime<sensor_msgs::PointCloud2, sensor_msgs::Image>;
 
   ros::Publisher img_pub_;
   ros::Publisher pcd_pub_;
+  ros::Publisher pcd_on_global_o3d_pub_;
   message_filters::Subscriber<sensor_msgs::PointCloud2> pcd_sub_;
   message_filters::Subscriber<sensor_msgs::Image> img_sub_;
   std::shared_ptr<message_filters::Synchronizer<MySyncPolicy>> sync_;
+  tf::TransformListener listener_;
 
   std::string camera_frame_id_;
   std::string lidar_frame_id_;

@@ -1,4 +1,3 @@
-#include <tf/transform_listener.h>
 #include <tf_conversions/tf_eigen.h>
 
 #include "omni_lidar_camera_fusion/omni_lidar_camera_fusion.hpp"
@@ -16,11 +15,10 @@ OmniLidarCameraFusion::OmniLidarCameraFusion()
   nh.getParam("lidar_max_range", lidar_max_range_);
 
   // Get the transform from lidar frame to camera frame
-  tf::TransformListener listener;
   tf::StampedTransform transform;
   while (true) {
     try {
-      listener.lookupTransform(camera_frame_id_, lidar_frame_id_, ros::Time(0), transform);
+      listener_.lookupTransform(camera_frame_id_, lidar_frame_id_, ros::Time(0), transform);
       break;
     } catch (tf::TransformException & ex) {
       ROS_WARN("%s\n", ex.what());
@@ -36,6 +34,7 @@ OmniLidarCameraFusion::OmniLidarCameraFusion()
   // Initialize publishers
   pcd_pub_ = nh.advertise<PointCloud>("/sensor_scan_rgb", 1);
   img_pub_ = nh.advertise<sensor_msgs::Image>("/sensor_scan_image", 1);
+  pcd_on_global_o3d_pub_ = nh.advertise<PointCloud>("/sensor_scan_rgb_global_o3d", 1);
 
   // Initialize message filters and synchronizer
   pcd_sub_.subscribe(nh, pcTopic_, 1);
@@ -118,10 +117,31 @@ void OmniLidarCameraFusion::callback(
   colored_point_cloud->header.frame_id = input_cloud_msg->header.frame_id;
   pcd_pub_.publish(colored_point_cloud);
 
+  OmniLidarCameraFusion::transformPointCloud(colored_point_cloud); // Transform point cloud to map frame
+  pcd_on_global_o3d_pub_.publish(colored_point_cloud);
+
   // Publish the image with points
   sensor_msgs::ImagePtr output_image_msg =
     cv_bridge::CvImage(input_image_msg->header, "bgr8", cv_color_ptr->image).toImageMsg();
   img_pub_.publish(output_image_msg);
+}
+
+void OmniLidarCameraFusion::transformPointCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr & cloud)
+{
+  tf::StampedTransform transform;
+  listener_.lookupTransform("map", cloud->header.frame_id, ros::Time(0), transform);
+  Eigen::Affine3d lidar2mapeigen;
+  tf::transformTFToEigen(transform, lidar2mapeigen);
+  Eigen::Matrix4f lidar2map = lidar2mapeigen.matrix().cast<float>();
+  pcl::transformPointCloud(*cloud, *cloud, lidar2map);
+
+  Eigen::Matrix4f ros2opengl;
+  ros2opengl << 0, 0, -1, 0,
+                -1, 0, 0, 0,
+                0, 1, 0, 0,
+                0, 0, 0, 1;
+
+  pcl::transformPointCloud(*cloud, *cloud, ros2opengl);
 }
 
 int main(int argc, char ** argv)
