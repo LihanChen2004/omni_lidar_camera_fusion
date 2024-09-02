@@ -37,7 +37,6 @@ OmniLidarCameraFusion::OmniLidarCameraFusion()
   pcd_pub_ = nh.advertise<PointCloud>("/sensor_scan_rgb", 1);
   semantic_pcd_pub_ = nh.advertise<PointCloud>("/sensor_scan_semantic_pcd", 1);
   img_pub_ = nh.advertise<sensor_msgs::Image>("/sensor_scan_image", 1);
-  pcd_on_global_o3d_pub_ = nh.advertise<PointCloud>("/sensor_scan_rgb_global_o3d", 1);
   semantic_pub_ = nh.advertise<sensor_msgs::Image>("/sensor_scan_semantic_img", 1);
 
   // Initialize message filters and synchronizer
@@ -148,12 +147,7 @@ void OmniLidarCameraFusion::callback(
   semantic_point_cloud->header.frame_id = input_cloud_msg->header.frame_id;
   pcd_pub_.publish(colored_point_cloud);
 
-  std::cout << "colored_point_cloud->points.size()" << colored_point_cloud->points.size() << std::endl;
-  std::cout << "semantic_point_cloud->points.size()" << semantic_point_cloud->points.size() << std::endl;
   semantic_pcd_pub_.publish(semantic_point_cloud);
-
-  OmniLidarCameraFusion::transformPointCloud(colored_point_cloud); // Transform point cloud to map frame
-  pcd_on_global_o3d_pub_.publish(colored_point_cloud);
 
   // Publish the image with points
   sensor_msgs::ImagePtr output_image_msg =
@@ -165,7 +159,7 @@ void OmniLidarCameraFusion::callback(
   semantic_pub_.publish(output_semantic_msg);
 }
 
-void OmniLidarCameraFusion::transformPointCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr & cloud)
+void OmniLidarCameraFusion::transPcdToGlobal(pcl::PointCloud<pcl::PointXYZRGB>::Ptr & cloud)
 {
   tf::StampedTransform transform;
   listener_.lookupTransform("map", cloud->header.frame_id, ros::Time(0), transform);
@@ -173,14 +167,6 @@ void OmniLidarCameraFusion::transformPointCloud(pcl::PointCloud<pcl::PointXYZRGB
   tf::transformTFToEigen(transform, lidar2mapeigen);
   Eigen::Matrix4f lidar2map = lidar2mapeigen.matrix().cast<float>();
   pcl::transformPointCloud(*cloud, *cloud, lidar2map);
-
-  Eigen::Matrix4f ros2opengl;
-  ros2opengl << 0, 0, -1, 0,
-                -1, 0, 0, 0,
-                0, 1, 0, 0,
-                0, 0, 0, 1;
-
-  pcl::transformPointCloud(*cloud, *cloud, ros2opengl);
 }
 
 int main(int argc, char ** argv)

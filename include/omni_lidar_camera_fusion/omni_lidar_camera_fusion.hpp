@@ -35,7 +35,7 @@ private:
 
   void filterPointCloud(PointCloud::Ptr & cloud, float min_dist, float max_dist);
 
-  void transformPointCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr & cloud);
+  void transPcdToGlobal(pcl::PointCloud<pcl::PointXYZRGB>::Ptr & cloud);
 
   using MySyncPolicy =
     message_filters::sync_policies::ApproximateTime<sensor_msgs::PointCloud2, sensor_msgs::Image, sensor_msgs::Image>;
@@ -44,7 +44,6 @@ private:
   ros::Publisher semantic_pcd_pub_;
   ros::Publisher semantic_pub_;
   ros::Publisher pcd_pub_;
-  ros::Publisher pcd_on_global_o3d_pub_;
   message_filters::Subscriber<sensor_msgs::PointCloud2> pcd_sub_;
   message_filters::Subscriber<sensor_msgs::PointCloud2> semantic_pcd_sub_;
   message_filters::Subscriber<sensor_msgs::Image> img_sub_;
