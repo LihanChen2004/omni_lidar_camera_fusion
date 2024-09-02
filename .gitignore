@@ -7,3 +7,9 @@ install
 .vscode
 
 .catkin_workspace
+
+.history
+
+my_test_code
+
+typings
