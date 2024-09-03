@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<launch>
+
+  <node pkg="omni_lidar_camera_fusion" type="msg_synchronization_node" name="msg_synchronization_node" output="screen">
+  </node>
+
+  <node type="rviz" name="rviz" pkg="rviz" args="-d $(find omni_lidar_camera_fusion)/rviz/sync_visualize.rviz" />
+
+</launch>

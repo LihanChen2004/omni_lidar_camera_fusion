@@ -47,3 +47,9 @@ target_link_libraries(lidar_camera_fusion_node
    ${OpenCV_LIBRARIES}
    ${Boost_LIBRARIES}
 )
+add_executable(msg_synchronization_node  src/msg_synchronization_node.cpp)
+target_link_libraries(msg_synchronization_node
+   ${catkin_LIBRARIES}
+   ${PCL_LIBRARIES}
+   ${Boost_LIBRARIES}
+)
