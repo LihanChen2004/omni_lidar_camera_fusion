@@ -6,6 +6,9 @@ from sensor_msgs.msg import Image as ROSImage
 from cv_bridge import CvBridge
 from equilib import Equi2Pers
 from concurrent.futures import ThreadPoolExecutor
+import tf2_ros
+from geometry_msgs.msg import TransformStamped
+from tf.transformations import quaternion_from_euler
 
 def extend_pano_image(equi_img_np: np.ndarray) -> np.ndarray:
     """
@@ -33,7 +36,6 @@ class PanoramaToPerspectiveNode:
         rospy.init_node('panorama_to_perspective', anonymous=True)
         self.bridge = CvBridge()
 
-        # 初始化Equi2Pers
         self.equi2pers = Equi2Pers(
             height=320,
             width=640,
@@ -41,27 +43,55 @@ class PanoramaToPerspectiveNode:
             mode="bilinear",
         )
 
-        # 创建六个Publisher
         self.publishers = [
             rospy.Publisher(f'/camera/perspective_{i}', ROSImage, queue_size=10) for i in range(6)
         ]
 
-        # 订阅/camera/image话题
         rospy.Subscriber('/camera/image', ROSImage, self.image_callback)
 
-        # 初始化线程池
         self.executor = ThreadPoolExecutor(max_workers=6)
+
+        self.tf_broadcaster = tf2_ros.TransformBroadcaster()
 
         # 定义六个视角的旋转角度
         self.rotations = [
-            {'roll': 0., 'pitch': np.radians(15), 'yaw': 2 * np.pi / 3},  # upper left view
-            {'roll': 0., 'pitch': np.radians(15), 'yaw': 0.},             # upper front view
-            {'roll': 0., 'pitch': np.radians(15), 'yaw': -2 * np.pi / 3}, # upper right view
-            {'roll': 0., 'pitch': np.radians(-15), 'yaw': 2 * np.pi / 3}, # lower left view
-            {'roll': 0., 'pitch': np.radians(-15), 'yaw': 0.},            # lower front view
-            {'roll': 0., 'pitch': np.radians(-15), 'yaw': -2 * np.pi / 3} # lower right view
+            {'roll': 0., 'pitch': np.radians(-15), 'yaw': np.radians(120)},  # upper left view
+            {'roll': 0., 'pitch': np.radians(-15), 'yaw': 0.},             # upper front view
+            {'roll': 0., 'pitch': np.radians(-15), 'yaw': np.radians(-120)}, # upper right view
+            {'roll': 0., 'pitch': np.radians(15), 'yaw': np.radians(120)}, # lower left view
+            {'roll': 0., 'pitch': np.radians(15), 'yaw': 0.},            # lower front view
+            {'roll': 0., 'pitch': np.radians(15), 'yaw': np.radians(-120)} # lower right view
+        ]
+
+        self.camera_translations = [
+            (0.0, 0.0, 0.0),
+            (0.0, 0.0, 0.0),
+            (0.0, 0.0, 0.0),
+            (0.0, 0.0, 0.0),
+            (0.0, 0.0, 0.0),
+            (0.0, 0.0, 0.0) 
         ]
         
+        self.publish_transforms()
+
+    def publish_transforms(self):
+        for i, rotation in enumerate(self.rotations):
+            t = TransformStamped()
+            t.header.stamp = rospy.Time.now()
+            t.header.frame_id = "camera"
+            t.child_frame_id = f"camera/perspective_{i}"
+            t.transform.translation.x = self.camera_translations[i][0]
+            t.transform.translation.y = self.camera_translations[i][1]
+            t.transform.translation.z = self.camera_translations[i][2]
+
+            q = quaternion_from_euler(-rotation['pitch'], rotation['yaw'], rotation['roll'], axes='sxyz')
+            t.transform.rotation.x = q[0]
+            t.transform.rotation.y = q[1]
+            t.transform.rotation.z = q[2]
+            t.transform.rotation.w = q[3]
+
+            self.tf_broadcaster.sendTransform(t)
+
     def image_callback(self, msg):
         cv_img = self.bridge.imgmsg_to_cv2(msg, desired_encoding='rgb8')
 
@@ -80,6 +110,8 @@ class PanoramaToPerspectiveNode:
             perspective_image = future.result()
             ros_image = self.bridge.cv2_to_imgmsg(perspective_image, encoding="rgb8")
             self.publishers[i].publish(ros_image)
+
+        self.publish_transforms()
 
     def run(self):
         rospy.spin()
