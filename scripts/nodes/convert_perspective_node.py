@@ -27,7 +27,7 @@ class PanoramaToPerspectiveNode:
         # 创建发布者和订阅者
         self.image_publishers = [rospy.Publisher(f'/camera/perspective_{i}', ROSImage, queue_size=10) for i in range(6)]
         self.camera_info_publisher = rospy.Publisher('/camera/camera_info', CameraInfo, queue_size=10)
-        rospy.Subscriber('/camera/image', ROSImage, self.image_callback)
+        rospy.Subscriber('/synced/camera/image', ROSImage, self.image_callback)
 
         # 使用线程池来并行处理透视图生成
         self.executor = ThreadPoolExecutor(max_workers=6)

@@ -13,10 +13,10 @@ class SyncNode
 public:
   SyncNode()
   {
-    pointcloud_sub_.subscribe(nh_, "/registered_scan", 1);
-    image_sub_.subscribe(nh_, "/camera/image", 1);
-    semantic_sub_.subscribe(nh_, "/camera/semantic_image", 1);
-    marker_array_sub_.subscribe(nh_, "/object_markers", 1);
+    pointcloud_sub_.subscribe(nh_, "/registered_scan", 3);
+    image_sub_.subscribe(nh_, "/camera/image", 3);
+    semantic_sub_.subscribe(nh_, "/camera/semantic_image", 3);
+    marker_array_sub_.subscribe(nh_, "/object_markers", 10);
 
     sync_.reset(
       new Sync(MySyncPolicy(10), pointcloud_sub_, image_sub_, semantic_sub_, marker_array_sub_));
@@ -30,7 +30,6 @@ public:
   }
 
 private:
-  // 回调函数
   void callback(
     const sensor_msgs::PointCloud2ConstPtr & pointcloud, const sensor_msgs::ImageConstPtr & image,
     const sensor_msgs::ImageConstPtr & semantic,
