@@ -124,6 +124,7 @@ class PanoramaToPerspectiveNode:
                 perspective_image = future.result()
                 ros_image = self.bridge.cv2_to_imgmsg(perspective_image, encoding="rgb8")
                 ros_image.header.frame_id = f'camera/perspective_{i}'
+                ros_image.header.stamp = msg.header.stamp
 
                 # 发布透视图
                 self.image_publishers[i].publish(ros_image)
